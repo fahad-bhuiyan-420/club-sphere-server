@@ -7,7 +7,7 @@ console.log(process.env)
 const admin = require("firebase-admin");
 const crypto = require('crypto');
 
-const serviceAccount = require(process.env.SERVICE);
+const serviceAccount = require("./club-sphere-cf585-firebase-adminsdk-fbsvc-423c976193.json");
 const stripe = require('stripe')(process.env.STRIPE_SECRET);
 
 admin.initializeApp({
