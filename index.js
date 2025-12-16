@@ -78,8 +78,18 @@ async function run() {
     })
 
     app.get('/clubs', async (req, res) => {
-      const { status, email } = req.query;
+      const { status, email, search, sortedKey, sortedValue } = req.query;
       const query = {}
+
+      if (search) {
+        // query.clubName = { $regex: search, $options: 'i' }
+
+        query.$or = [
+          { clubName: { $regex: search, $options: 'i' } },
+        ]
+
+      }
+
       if (email) {
         query.managerEmail = email
       }
@@ -87,12 +97,49 @@ async function run() {
         query.status = status;
       }
 
+      if (sortedKey || sortedValue) {
+        const cursor = clubCollections.find(query).sort({ [sortedKey]: Number(sortedValue) })
+        const result = await cursor.toArray();
+        res.send(result);
+      }
+
+      else {
+        const cursor = clubCollections.find(query)
+        const result = await cursor.toArray();
+        res.send(result);
+      }
+
 
       // console.log('headers', req.headers);
 
-      const cursor = clubCollections.find(query)
-      const result = await cursor.toArray();
-      res.send(result);
+
+
+    })
+
+    app.get('/member-clubs', async (req, res) => {
+      const queryEmail = {}
+      const { userEmail } = req.query;
+      if (userEmail) {
+        queryEmail.userEmail = userEmail
+      }
+      const memberships = await membershipCollections.find(queryEmail).toArray();
+      const clubIds = memberships.map(member => new ObjectId(member.clubId));
+
+      const totalClubs = await clubCollections.find({
+        _id: { $in: clubIds }
+      }).toArray();
+
+      console.log(memberships)
+      const mergedClubs = totalClubs.map(club => {
+        const membership = memberships.find(
+          m => m.clubId === club._id.toString()
+        );
+
+        club.membershipStatus = membership?.status
+        return club
+      });
+
+      res.send(mergedClubs);
     })
 
     app.get('/clubs/:id', async (req, res) => {
@@ -107,9 +154,9 @@ async function run() {
     })
 
     app.patch('/clubs/:id', async (req, res) => {
-      const {id} = req.params
+      const { id } = req.params
       const clubData = req.body
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
 
       const updatedDoc = {
         $set: clubData
@@ -120,8 +167,8 @@ async function run() {
     })
 
     app.delete('/clubs/:id', async (req, res) => {
-      const {id} =  req.params;
-      const query = {_id: new ObjectId(id)};
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) };
 
       const result = await clubCollections.deleteOne(query);
       res.send(result);
@@ -137,6 +184,7 @@ async function run() {
 
     app.get('/events', async (req, res) => {
       const query = {}
+
       const cursor = eventCollections.find(query);
       const result = await cursor.toArray();
       res.send(result);
@@ -147,6 +195,58 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await eventCollections.findOne(query);
       res.send(result);
+    })
+
+    app.get('/upcoming-events', async (req, res) => {
+      const { email } = req.query;
+      const emailQuery = { userEmail: email }
+      const members = await membershipCollections.find(emailQuery).toArray();
+
+      const data = await Promise.all(
+        members.map(async member => {
+          const eventsCount = await eventCollections.find({
+            clubId: member.clubId.toString()
+          }).toArray()
+
+          return eventsCount
+        })
+      );
+
+      const flatEvents = data.flat()
+      res.send(flatEvents);
+    })
+
+    app.get('/member-events', async (req, res) => {
+      const queryEmail = {}
+      const { userEmail } = req.query;
+      if (userEmail) {
+        queryEmail.userEmail = userEmail
+      }
+      const registrations = await eventRegistrationCollections.find(queryEmail).toArray();
+      const eventIds = registrations.map(reg => new ObjectId(reg.eventId));
+      console.log(registrations, eventIds)
+      const totalEvents = await eventCollections.find({
+        _id: { $in: eventIds }
+      }).toArray();
+
+      const clubIds = totalEvents.map(event => new ObjectId(event.clubId));
+      const clubs = await clubCollections.find({
+        _id: { $in: clubIds }
+      }).toArray()
+
+      const mergedEvents = totalEvents.map(event => {
+        const registration = registrations.find(
+          m => m.eventId === event._id.toString()
+        );
+
+        const club = clubs.find(c => c._id.toString() === event.clubId)
+
+        event.registrationStatus = registration?.status
+        event.clubName = club?.clubName
+        return event
+      });
+
+      res.send(mergedEvents);
     })
 
     app.patch('/events/:id', async (req, res) => {
@@ -169,6 +269,8 @@ async function run() {
       res.send(result);
     })
 
+    // users apis
+
     app.post('/users', async (req, res) => {
       const userInfo = req.body;
       userInfo.role = 'member';
@@ -183,11 +285,30 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/users', async (req, res) => {
+      const query = {}
+      const cursor = userCollections.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
     app.get('/users/:email/role', async (req, res) => {
       const { email } = req.params
       const query = { email: email }
       const user = await userCollections.findOne(query);
       res.send({ role: user?.role })
+    })
+
+    app.patch('/users/:id', async (req, res) => {
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) }
+      const role = req.body
+      console.log(id, role)
+      const updatedDoc = {
+        $set: role
+      };
+      const result = await userCollections.updateOne(query, updatedDoc);
+      res.send(result);
     })
 
 
@@ -205,6 +326,19 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/allEventRegistrations', async (req, res) => {
+      const { userEmail } = req.query
+      const query = {}
+
+      if (userEmail) {
+        query.userEmail = userEmail
+      }
+
+      const cursor = eventRegistrationCollections.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
     app.get('/event-registrations', async (req, res) => {
       const { eventId, email } = req.query;
       const query = {};
@@ -214,7 +348,7 @@ async function run() {
         res.send(result);
       }
 
-      else{
+      else {
         res.send([])
       }
 
@@ -249,8 +383,20 @@ async function run() {
       const result = await membershipCollections.findOne(query);
       res.send(result);
     })
-    
-    // 
+
+    app.get('/members', async (req, res) => {
+      const query = {}
+      const { userEmail } = req.query;
+
+      if (userEmail) {
+        query.userEmail = userEmail
+      }
+      const cursor = membershipCollections.find(query)
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+
 
     app.get('/membership/:id', async (req, res) => {
       const { id } = req.params;
@@ -282,7 +428,38 @@ async function run() {
 
       const result = await membershipCollections.insertOne(membershipInfo);
       res.send(result);
+    })
 
+    app.get('/club-members', async (req, res) => {
+      // const data = [];
+      // const clubs = await clubCollections.find().toArray();
+      // clubs.map(club => {
+      //   const query = {clubId: club._id.toString()};
+      //   const membershipCount = membershipCollections.countDocuments(query);
+      //   data.push({
+      //     name: club.clubName,
+      //     membership: membershipCount
+      //   })
+      // })
+
+      // res.send(data);
+
+      const clubs = await clubCollections.find().toArray();
+
+      const data = await Promise.all(
+        clubs.map(async club => {
+          const membershipCount = await membershipCollections.countDocuments({
+            clubId: club._id.toString()
+          });
+
+          return {
+            name: club.clubName,
+            membership: membershipCount
+          }
+        })
+      );
+
+      res.send(data);
     })
 
     app.get('/total-members', async (req, res) => {
@@ -335,6 +512,20 @@ async function run() {
       res.send(totalEventRegistrations)
     })
 
+    // payment apis
+    app.get('/payments', async (req, res) => {
+      const query = {}
+      const { userEmail } = req.query;
+
+      if (userEmail) {
+        query.userEmail = userEmail
+      }
+      console.log(userEmail)
+      const cursor = paymentCollections.find(query);
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+
 
     // stripe apis
     app.post('/create-checkout-session', async (req, res) => {
@@ -347,11 +538,13 @@ async function run() {
       const metadata = {};
 
       if (paymentInfo.clubId) {
-        metadata.clubId = paymentInfo.clubId
+        metadata.clubId = paymentInfo.clubId,
+          metadata.name = paymentInfo.name
       }
 
       if (paymentInfo.eventId) {
-        metadata.eventId = paymentInfo.eventId
+        metadata.eventId = paymentInfo.eventId,
+          metadata.name = paymentInfo.name
       }
 
       const session = await stripe.checkout.sessions.create({
@@ -387,12 +580,13 @@ async function run() {
 
       const membershipExist = await membershipCollections.findOne(query)
       const eventRegistrationExist = await eventRegistrationCollections.findOne(query)
-
+      console.log(query, membershipExist, eventRegistrationExist)
       if (membershipExist || eventRegistrationExist) {
         return res.send({ message: 'already exists' })
       }
-      // console.log(session);
+      console.log(session);
       if (session.payment_status === 'paid') {
+
         if (session.metadata.eventId) {
           await eventRegistrationCollections.insertOne({
             userEmail: session.customer_email,
@@ -403,6 +597,14 @@ async function run() {
             amount: session.amount_total / 100,
             registeredAt: new Date()
           })
+
+          await paymentCollections.insertOne({
+            userEmail: session.customer_email,
+            amount: session.amount_total / 100,
+            type: 'event',
+            name: session.metadata.name,
+            createdAt: new Date()
+          })
         }
         else {
           await membershipCollections.insertOne({
@@ -412,6 +614,14 @@ async function run() {
             paymentId: session.payment_intent,
             amount: session.amount_total / 100,
             joinedAt: new Date()
+          })
+
+          await paymentCollections.insertOne({
+            userEmail: session.customer_email,
+            amount: session.amount_total / 100,
+            type: 'membership',
+            name: session.metadata.name,
+            createdAt: new Date()
           })
         }
       }
