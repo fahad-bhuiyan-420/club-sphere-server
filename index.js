@@ -78,7 +78,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/clubs',  async (req, res) => {
+    app.get('/clubs', async (req, res) => {
       const { status, email, search, sortedKey, sortedValue, } = req.query;
       const query = {}
 
@@ -269,7 +269,7 @@ async function run() {
 
     // users apis
 
-    app.post('/users', async (req, res) => {
+    app.post('/users',  async (req, res) => {
       const userInfo = req.body;
       userInfo.role = 'member';
       userInfo.createdAt = new Date();
@@ -283,7 +283,7 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/users', async (req, res) => {
+    app.get('/users', verifyJWT, async (req, res) => {
       const query = {}
       const cursor = userCollections.find(query);
       const result = await cursor.toArray();
