@@ -173,7 +173,7 @@ async function run() {
     })
 
     // Event apis
-    app.post('/events', async (req, res) => {
+    app.post('/events', verifyJWT, async (req, res) => {
       const eventData = req.body;
       // eventData.clubId = generateClubId();
       const result = await eventCollections.insertOne(eventData);
@@ -247,7 +247,7 @@ async function run() {
       res.send(mergedEvents);
     })
 
-    app.patch('/events/:id', async (req, res) => {
+    app.patch('/events/:id', verifyJWT, async (req, res) => {
       const { id } = req.params;
       const eventInfo = req.body
       const query = { _id: new ObjectId(id) };
@@ -260,7 +260,7 @@ async function run() {
       res.send(result)
     })
 
-    app.delete('/events/:id', async (req, res) => {
+    app.delete('/events/:id', verifyJWT, async (req, res) => {
       const { id } = req.params;
       const query = { _id: new ObjectId(id) };
       const result = await eventCollections.deleteOne(query);
@@ -297,7 +297,7 @@ async function run() {
       res.send({ role: user?.role })
     })
 
-    app.patch('/users/:id', async (req, res) => {
+    app.patch('/users/:id', verifyJWT, async (req, res) => {
       const { id } = req.params;
       const query = { _id: new ObjectId(id) }
       const role = req.body
