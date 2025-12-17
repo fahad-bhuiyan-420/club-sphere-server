@@ -369,7 +369,7 @@ async function run() {
 
 
     // membership apis
-    app.get('/membership', async (req, res) => {
+    app.get('/membership', verifyJWT, async (req, res) => {
       const { email, clubId } = req.query;
       const query = {};
       if (email) {
@@ -382,7 +382,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/members', async (req, res) => {
+    app.get('/members' , verifyJWT, async (req, res) => {
       const query = {}
       const { userEmail } = req.query;
 
@@ -396,7 +396,7 @@ async function run() {
 
 
 
-    app.get('/membership/:id', async (req, res) => {
+    app.get('/membership/:id', verifyJWT, async (req, res) => {
       const { id } = req.params;
       const query = { clubId: id };
       const cursor = membershipCollections.find(query);
@@ -404,7 +404,7 @@ async function run() {
       res.send(result);
     })
 
-    app.patch('/membership/:id', async (req, res) => {
+    app.patch('/membership/:id', verifyJWT, async (req, res) => {
       const { id } = req.params;
       const status = req.body;
       console.log(status);
@@ -416,7 +416,7 @@ async function run() {
       res.send(result);
     })
 
-    app.post('/membership', async (req, res) => {
+    app.post('/membership', verifyJWT, async (req, res) => {
       const membershipInfo = req.body;
       const query = { userEmail: membershipInfo.userEmail, clubId: membershipInfo.clubId };
       const existingMembership = await membershipCollections.findOne(query);
@@ -428,7 +428,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/club-members', async (req, res) => {
+    app.get('/club-members', verifyJWT, async (req, res) => {
       // const data = [];
       // const clubs = await clubCollections.find().toArray();
       // clubs.map(club => {
@@ -460,7 +460,7 @@ async function run() {
       res.send(data);
     })
 
-    app.get('/total-members', async (req, res) => {
+    app.get('/total-members', verifyJWT, async (req, res) => {
       const { email } = req.query;
       const query = {};
       if (email) {
@@ -478,7 +478,7 @@ async function run() {
 
     })
 
-    app.get('/total-events', async (req, res) => {
+    app.get('/total-events', verifyJWT, async (req, res) => {
       const { email } = req.query;
       const query = {};
       if (email) {
@@ -494,7 +494,7 @@ async function run() {
       res.send(totalEvents);
     })
 
-    app.get('/created-event-registrations', async (req, res) => {
+    app.get('/created-event-registrations', verifyJWT, async (req, res) => {
       const { email } = req.query;
       const query = {};
       if (email) {
@@ -511,7 +511,7 @@ async function run() {
     })
 
     // payment apis
-    app.get('/payments', async (req, res) => {
+    app.get('/payments', verifyJWT, async (req, res) => {
       const query = {}
       const { userEmail } = req.query;
 
@@ -526,7 +526,7 @@ async function run() {
 
 
     // stripe apis
-    app.post('/create-checkout-session', async (req, res) => {
+    app.post('/create-checkout-session', verifyJWT, async (req, res) => {
       const paymentInfo = req.body;
       const amount = parseInt(paymentInfo.amount) * 100
       paymentInfo.transactionId = generateTransactionId();
