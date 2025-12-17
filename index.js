@@ -311,7 +311,7 @@ async function run() {
 
 
     // eventRegistration apis
-    app.get('/eventRegistrations', async (req, res) => {
+    app.get('/eventRegistrations', verifyJWT, async (req, res) => {
       const { eventId, email } = req.query;
       const query = {};
       if (eventId) {
@@ -324,7 +324,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/allEventRegistrations', async (req, res) => {
+    app.get('/allEventRegistrations', verifyJWT, async (req, res) => {
       const { userEmail } = req.query
       const query = {}
 
@@ -337,7 +337,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/event-registrations', async (req, res) => {
+    app.get('/event-registrations', verifyJWT, async (req, res) => {
       const { eventId, email } = req.query;
       const query = {};
       if (eventId) {
@@ -352,7 +352,7 @@ async function run() {
 
     })
 
-    app.post('/eventRegistrations', async (req, res) => {
+    app.post('/eventRegistrations', verifyJWT, async (req, res) => {
       const eventRegistrationInfo = req.body;
       console.log(eventRegistrationInfo);
       const alreadyExisting = await eventRegistrationCollections.findOne({
