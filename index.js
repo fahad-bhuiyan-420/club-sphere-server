@@ -72,7 +72,7 @@ async function run() {
     const eventRegistrationCollections = db.collection('eventRegistration')
     const paymentCollections = db.collection('payments')
 
-    app.post('/clubs', async (req, res) => {
+    app.post('/clubs', verifyJWT, async (req, res) => {
       const club = req.body;
       const result = await clubCollections.insertOne(club);
       res.send(result);
@@ -140,7 +140,7 @@ async function run() {
       res.send(mergedClubs);
     })
 
-    app.get('/clubs/:id', async (req, res) => {
+    app.get('/clubs/:id', verifyJWT, async (req, res) => {
       const id = req.params.id
       console.log(id)
       const query = { _id: new ObjectId(id) }
@@ -151,7 +151,7 @@ async function run() {
       res.send(result);
     })
 
-    app.patch('/clubs/:id', async (req, res) => {
+    app.patch('/clubs/:id', verifyJWT, async (req, res) => {
       const { id } = req.params
       const clubData = req.body
       const query = { _id: new ObjectId(id) };
@@ -164,7 +164,7 @@ async function run() {
       res.send(result);
     })
 
-    app.delete('/clubs/:id', async (req, res) => {
+    app.delete('/clubs/:id', verifyJWT, async (req, res) => {
       const { id } = req.params;
       const query = { _id: new ObjectId(id) };
 
