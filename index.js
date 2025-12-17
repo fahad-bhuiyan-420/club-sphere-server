@@ -140,7 +140,7 @@ async function run() {
       res.send(mergedClubs);
     })
 
-    app.get('/clubs/:id', verifyJWT, async (req, res) => {
+    app.get('/clubs/:id',  async (req, res) => {
       const id = req.params.id
       console.log(id)
       const query = { _id: new ObjectId(id) }
