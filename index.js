@@ -7,7 +7,7 @@ console.log(process.env)
 const admin = require("firebase-admin");
 const crypto = require('crypto');
 
-const serviceAccount = require(process.env.SERVICE);
+const serviceAccount = require("./club-sphere-cf585-firebase-adminsdk-fbsvc-423c976193.json");
 const stripe = require('stripe')(process.env.STRIPE_SECRET);
 
 admin.initializeApp({
@@ -35,6 +35,7 @@ const verifyJWT = async (req, res, next) => {
     const decoded = await admin.auth().verifyIdToken(idToken);
     console.log('decoded in the token', decoded);
     req.decoded_email = decoded.email
+    // console.log(decoded.email)
     next()
   }
   catch (err) {
@@ -77,8 +78,8 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/clubs', async (req, res) => {
-      const { status, email, search, sortedKey, sortedValue } = req.query;
+    app.get('/clubs',  async (req, res) => {
+      const { status, email, search, sortedKey, sortedValue, } = req.query;
       const query = {}
 
       if (search) {
@@ -97,6 +98,8 @@ async function run() {
         query.status = status;
       }
 
+      // console.log(user, req.decoded_email)
+
       if (sortedKey || sortedValue) {
         const cursor = clubCollections.find(query).sort({ [sortedKey]: Number(sortedValue) })
         const result = await cursor.toArray();
@@ -108,11 +111,6 @@ async function run() {
         const result = await cursor.toArray();
         res.send(result);
       }
-
-
-      // console.log('headers', req.headers);
-
-
 
     })
 
